@@ -73,7 +73,8 @@ class clustercheck(BaseHTTPServer.BaseHTTPRequestHandler):
           self.end_headers()
           self.wfile.write("Percona XtraDB Cluster Node is not synced.")
       
-        conn.close()
+        if conn:
+          conn.close()
         opts.being_updated = False
       else:
         #use cache result
