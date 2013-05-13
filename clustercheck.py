@@ -29,7 +29,8 @@ class clustercheck(BaseHTTPServer.BaseHTTPRequestHandler):
         #cache expired
         opts.being_updated   = True
         opts.last_query_time = ctime
-       
+      
+        conn = None
         try:
           conn = MySQLdb.connect(
             read_default_file = '~/.my.cnf',
@@ -45,9 +46,12 @@ class clustercheck(BaseHTTPServer.BaseHTTPRequestHandler):
           self.end_headers()
           self.wfile.write("Connection Failed to Percona XtraDB Cluster Node.")
 
-        curs = conn.cursor()
-        curs.execute("SHOW STATUS LIKE 'wsrep_local_state'")
-        res = curs.fetchall()
+        if conn:
+          curs = conn.cursor()
+          curs.execute("SHOW STATUS LIKE 'wsrep_local_state'")
+          res = curs.fetchall()
+        else:
+            res = ''
                        
         if len(res) == 0:
           self.send_response(503)
