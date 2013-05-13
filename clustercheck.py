@@ -11,7 +11,7 @@ import time
 __author__="See Authors.txt"
 __copyright__="David Busby, Percona Ireland Ltd"
 __license__="GNU v3 + section 7: Redistribution/Reuse of this code is permitted under the GNU v3 license, as an additional term ALL code must carry the original Author(s) credit in comment form."
-__dependencies__="MySQLdb, python26-mysqldb (el5) / MySQL-python (el6)"
+__dependencies__="MySQLdb (python26-mysqldb (el5) / MySQL-python (el6))"
 __description__="Provides a stand alone http service, evaluating wsrep_local_state intended for use with HAProxy"
 '''
 
