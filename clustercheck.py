@@ -41,10 +41,6 @@ class clustercheck(BaseHTTPServer.BaseHTTPRequestHandler):
                 cursorclass = MySQLdb.cursors.DictCursor)
             except MySQLdb.OperationalError:
                 opts.being_updated   = False #corrects a bug where the flag is never reset on communication failiure
-                self.send_response(503)
-                self.send_header("Content-type", "text/html")
-                self.end_headers()
-                self.wfile.write("Connection Failed to Percona XtraDB Cluster Node.")
 
             if conn:
                 curs = conn.cursor()
