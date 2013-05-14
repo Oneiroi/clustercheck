@@ -36,7 +36,6 @@ class clustercheck(BaseHTTPServer.BaseHTTPRequestHandler):
             read_default_file = '~/.my.cnf',
             host = '127.0.0.1',
             port = 3306,
-            db = 'rdba',
             cursorclass = MySQLdb.cursors.DictCursor
           )
         except MySQLdb.OperationalError:
