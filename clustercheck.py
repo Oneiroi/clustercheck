@@ -21,7 +21,6 @@ class opts:
     last_query_time      = 0
     last_query_result    = 0
     cnf_file             = '~/.my.cnf'
-    being_updated        = False
     # Overriding the connect timeout so that status check doesn't hang
     c_timeout              = 10
 
@@ -31,27 +30,25 @@ class clustercheck(BaseHTTPServer.BaseHTTPRequestHandler):
 
     def do_GET(self):
         ctime = time.time()
-        if ((ctime - opts.last_query_time) > opts.cache_time) and opts.being_updated == False:
+        if ((ctime - opts.last_query_time) > opts.cache_time):
             #cache expired
-            opts.being_updated   = True
             opts.last_query_time = ctime
 
             conn = None
+	    res = ''
             try:
-                conn = MySQLdb.connect(
-                read_default_file = opts.cnf_file,
-                connect_timeout = opts.c_timeout,
-                cursorclass = MySQLdb.cursors.DictCursor)
+                conn = MySQLdb.connect(read_default_file = opts.cnf_file,
+                                       connect_timeout = opts.c_timeout,
+                                       cursorclass = MySQLdb.cursors.DictCursor)
+
+		if conn:
+		    curs = conn.cursor()
+		    curs.execute("SHOW STATUS LIKE 'wsrep_local_state'")
+		    res = curs.fetchall()
+		else:
+		    res = ''
             except MySQLdb.OperationalError:
-                opts.being_updated   = False #corrects a bug where the flag is never reset on communication failiure
-
-            if conn:
-                curs = conn.cursor()
-                curs.execute("SHOW STATUS LIKE 'wsrep_local_state'")
-                res = curs.fetchall()
-            else:
-                res = ''
-
+		print "Error connecting with MySQL"
 
             if len(res) == 0:
                 self.send_response(503)
@@ -74,7 +71,6 @@ class clustercheck(BaseHTTPServer.BaseHTTPRequestHandler):
 
             if conn:
                 conn.close()
-                opts.being_updated = False
         else:
         #use cache result
             if opts.last_query_result == '4' or (int(opts.available_when_donor) == 1 and opts.last_query_result == '2'):
