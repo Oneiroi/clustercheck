@@ -5,7 +5,6 @@ import BaseHTTPServer
 import MySQLdb
 import MySQLdb.cursors
 import optparse
-import time
 
 '''
 __author__="See AUTHORS.txt at https://github.com/Oneiroi/clustercheck"
@@ -17,9 +16,6 @@ __description__="Provides a stand alone http service, evaluating wsrep_local_sta
 
 class opts:
     available_when_donor = 0
-    cache_time           = 1
-    last_query_time      = 0
-    last_query_result    = 0
     cnf_file             = '~/.my.cnf'
     # Overriding the connect timeout so that status check doesn't hang
     c_timeout              = 10
@@ -29,60 +25,42 @@ class clustercheck(BaseHTTPServer.BaseHTTPRequestHandler):
         self.do_GET()
 
     def do_GET(self):
-        ctime = time.time()
-        if ((ctime - opts.last_query_time) > opts.cache_time):
-            #cache expired
-            opts.last_query_time = ctime
-
-            conn = None
-	    res = ''
-            try:
-                conn = MySQLdb.connect(read_default_file = opts.cnf_file,
-                                       connect_timeout = opts.c_timeout,
-                                       cursorclass = MySQLdb.cursors.DictCursor)
-
-		if conn:
-		    curs = conn.cursor()
-		    curs.execute("SHOW STATUS LIKE 'wsrep_local_state'")
-		    res = curs.fetchall()
-		else:
-		    res = ''
-            except MySQLdb.OperationalError:
-		print "Error connecting with MySQL"
-
-            if len(res) == 0:
-                self.send_response(503)
-                self.send_header("Content-type", "text/html")
-                self.end_headers()
-                self.wfile.write("Percona XtraDB Cluster Node state could not be retrieved.")
-
-            elif res[0]['Value'] == '4' or (int(opts.available_when_donor) == 1 and res[0]['Value'] == '2'):
-                opts.last_query_result = res[0]['Value']
-                self.send_response(200)
-                self.send_header("Content-type", "text/html")
-                self.end_headers()
-                self.wfile.write("Percona XtraDB Cluster Node is synced.")
-            else:
-                opts.last_query_result = res[0]['Value']
-                self.send_response(503)
-                self.send_header("Content-type", "text/html")
-                self.end_headers()
-                self.wfile.write("Percona XtraDB Cluster Node is not synced.")
+        conn = None
+        res = ''
+        
+        try:
+            conn = MySQLdb.connect(read_default_file = opts.cnf_file,
+                                   connect_timeout = opts.c_timeout,
+                                   cursorclass = MySQLdb.cursors.DictCursor)
 
             if conn:
-                conn.close()
-        else:
-        #use cache result
-            if opts.last_query_result == '4' or (int(opts.available_when_donor) == 1 and opts.last_query_result == '2'):
-                self.send_response(200)
-                self.send_header("Content-type", "text/html")
-                self.end_headers()
-                self.wfile.write("CACHED: Percona XtraDB Cluster Node is synced.")
+                curs = conn.cursor()
+                curs.execute("SHOW STATUS LIKE 'wsrep_local_state'")
+                res = curs.fetchall()
             else:
-                self.send_response(503)
-                self.send_header("Content-type", "text/html")
-                self.end_headers()
-                self.wfile.write("CACHED: Percona XtraDB Cluster Node is not synced.")
+                res = ''
+        except MySQLdb.OperationalError:
+            print "Error connecting with MySQL"
+
+        if len(res) == 0:
+            self.send_response(503)
+            self.send_header("Content-type", "text/html")
+            self.end_headers()
+            self.wfile.write("Percona XtraDB Cluster Node state could not be retrieved.")
+
+        elif res[0]['Value'] == '4' or (int(opts.available_when_donor) == 1 and res[0]['Value'] == '2'):
+            self.send_response(200)
+            self.send_header("Content-type", "text/html")
+            self.end_headers()
+            self.wfile.write("Percona XtraDB Cluster Node is synced.")
+        else:
+            self.send_response(503)
+            self.send_header("Content-type", "text/html")
+            self.end_headers()
+            self.wfile.write("Percona XtraDB Cluster Node is not synced.")
+
+        if conn:
+            conn.close()
 
 """
 Usage:
@@ -94,14 +72,12 @@ curl http://127.0.0.1:8000
 if __name__ == '__main__':
     parser = optparse.OptionParser()
     parser.add_option('-a','--available-when-donor', dest='awd', default=0, help="Available when donor [default: %default]")
-    parser.add_option('-c','--cache-time', dest='cache', default=1, help="Cache the last response for N seconds [default: %default]")
     parser.add_option('-f','--conf', dest='cnf', default='~/.my.cnf', help="MySQL Config file to use [default: %default]")
     parser.add_option('-p','--port', dest='port', default=8000, help="Port to listen on [default: %default]")
 
     options, args = parser.parse_args()
     opts.available_when_donor = options.awd
     opts.cnf_file =   options.cnf
-    opts.cache_time = options.cache
 
     server_class = BaseHTTPServer.HTTPServer
     httpd = server_class(('',int(options.port)),clustercheck)
