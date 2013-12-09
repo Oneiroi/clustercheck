@@ -8,7 +8,7 @@ This module requires MySQLdb package for python to function, aswell as a present
 This version is rewritten to use Python twisted, so this module is required.
 
 To start at run time:
-echo "/usr/bin/pyclustercheck -f /etc/my.cnf > /dev/null 2>&1 &" >> /etc/rc.local
+echo "/usr/bin/pyclustercheck -f /etc/my.cnf > /var/log/messages 2>&1 &" >> /etc/rc.local
 
 Contribute
 ==========
