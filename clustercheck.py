@@ -54,6 +54,7 @@ class clustercheck(BaseHTTPServer.BaseHTTPRequestHandler):
 
 
             if len(res) == 0:
+                opts.last_query_result = 0
                 self.send_response(503)
                 self.send_header("Content-type", "text/html")
                 self.end_headers()
