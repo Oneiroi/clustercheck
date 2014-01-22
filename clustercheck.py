@@ -6,6 +6,7 @@ import MySQLdb
 import MySQLdb.cursors
 import optparse
 import time
+import socket
 
 '''
 __author__="See AUTHORS.txt at https://github.com/Oneiroi/clustercheck"
@@ -102,6 +103,7 @@ if __name__ == '__main__':
     parser.add_option('-c','--cache-time', dest='cache', default=1, help="Cache the last response for N seconds [default: %default]")
     parser.add_option('-f','--conf', dest='cnf', default='~/.my.cnf', help="MySQL Config file to use [default: %default]")
     parser.add_option('-p','--port', dest='port', default=8000, help="Port to listen on [default: %default]")
+    parser.add_option('-6','--ipv6', action="store_true", dest='ipv6', default=False, help="Listen on ipv6 [default: %default]")
 
     options, args = parser.parse_args()
     opts.available_when_donor = options.awd
@@ -109,5 +111,9 @@ if __name__ == '__main__':
     opts.cache_time = options.cache
 
     server_class = BaseHTTPServer.HTTPServer
+
+    if options.ipv6:
+        server_class.address_family = socket.AF_INET6
+
     httpd = server_class(('',int(options.port)),clustercheck)
     httpd.serve_forever()
