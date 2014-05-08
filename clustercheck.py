@@ -77,9 +77,12 @@ if __name__ == '__main__':
     parser.add_option('-a','--available-when-donor', dest='awd', default=0, help="Available when donor [default: %default]")
     parser.add_option('-f','--conf', dest='cnf', default='~/.my.cnf', help="MySQL Config file to use [default: %default]")
     parser.add_option('-p','--port', dest='port', default=8000, help="Port to listen on [default: %default]")
+    parser.add_option('-6','--ipv6', dest='ipv6', action='store_true', default=False, help="Listen to ipv6 only (disabled ipv4) [default: %default]")
+    parser.add_option('-4','--ipv4', dest='ipv4', default='0.0.0.0', help="Listen to ipv4 on this address [default: %default]")
     options, args = parser.parse_args()
     opts.available_when_donor = options.awd
     opts.cnf_file =   options.cnf
+    bind = "::" if options.ipv6 else options.ipv4
 
-    reactor.listenTCP(int(options.port), server.Site(ServerStatus()))
+    reactor.listenTCP(int(options.port), server.Site(ServerStatus()), interface=bind)
     reactor.run()
