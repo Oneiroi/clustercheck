@@ -18,6 +18,8 @@ __description__="Provides a stand alone http service, evaluating wsrep_local_sta
 
 class opts:
     available_when_donor = 0
+    disable_when_ro      = 0
+    is_ro                = 0
     cache_time           = 1
     last_query_time      = 0
     last_query_result    = 0
@@ -54,6 +56,14 @@ class ServerStatus(resource.Resource):
                     curs.execute("SHOW STATUS LIKE 'wsrep_local_state'")
                     res = curs.fetchall()
                     opts.last_query_response = res
+
+                    if opts.disable_when_ro:
+                        curs.execute("SHOW VARIABLES LIKE 'read_only'")
+                        ro = curs.fetchone()
+                        if ro['Value'].lower() in ('on', '1'):
+                            res = () #read_only is set and opts.disable_when_ro is also set, we should return this node as down
+                            opts.is_ro = True
+
                     conn.close() #we're done with the connection let's not hang around
                     opts.being_updated = False #reset the flag
 
@@ -64,6 +74,8 @@ class ServerStatus(resource.Resource):
             request.setHeader("X-Cache", True)
             request.setHeader("X-Cache-TTL", "%d" % ttl)
             request.setHeader("X-Cache-Updating", opts.being_updated)
+            request.setHeader("X-Cache-disable-when-RO", opts.disable_when_ro)
+            request.setHeader("X-Cache-node-is-RO", opts.is_ro)
             #run from cached response
             res = opts.last_query_response
 
@@ -93,6 +105,7 @@ curl http://127.0.0.1:8000
 if __name__ == '__main__':
     parser = optparse.OptionParser()
     parser.add_option('-a','--available-when-donor', dest='awd', default=0, help="Available when donor [default: %default]")
+    parser.add_option('-r','--disable-when-readonly', action='store_true', dest='dwr', default=False, help="Disable when read_only flag is set (desirable when wanting to take a node out of the cluster wihtout desync) [default: %default]")
     parser.add_option('-c','--cache-time', dest='cache', default=1, help="Cache the last response for N seconds [default: %default]")
     parser.add_option('-f','--conf', dest='cnf', default='~/.my.cnf', help="MySQL Config file to use [default: %default]")
     parser.add_option('-p','--port', dest='port', default=8000, help="Port to listen on [default: %default]")
@@ -100,6 +113,7 @@ if __name__ == '__main__':
     parser.add_option('-4','--ipv4', dest='ipv4', default='0.0.0.0', help="Listen to ipv4 on this address [default: %default]")
     options, args             = parser.parse_args()
     opts.available_when_donor = options.awd
+    opts.disable_when_ro      = options.dwr
     opts.cnf_file             = options.cnf
     opts.cache_time           = int(options.cache)
 
