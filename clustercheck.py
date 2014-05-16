@@ -31,6 +31,9 @@ class opts:
 class ServerStatus(resource.Resource):
     isLeaf = True
     
+    def render_OPTIONS(self, request):
+        return self.render_GET(request)
+
     def render_GET(self, request):
         conn    = None
         res     = ''
