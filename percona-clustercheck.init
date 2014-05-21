@@ -1,0 +1,125 @@
+#!/bin/bash
+#
+# percona-clustercheck	This script starts/stops the clustercheck.py daemon
+#
+# chkconfig: 345 00 90
+# description: clustercheck.py is a script to allow clients to check the \
+# 		health status of nodes in a percona cluster
+#
+# processname: /usr/sbin/clustercheck.py
+# config: /etc/sysconfig/percona-clustercheck
+
+
+### BEGIN INIT INFO
+# Provides: 
+# Required-Start: $network $mysql
+# Required-Stop: 
+# Should-Start: 
+# Should-Stop: 
+# Default-Start: 3 4 5
+# Default-Stop: 0 1 2 6
+# Short-Description: start and stop clustercheck.py
+# Description: clustercheck.py is a script to allow clients to check the \
+# 		health status of nodes in a percona cluster
+### END INIT INFO
+
+PATH=/sbin:/bin:/usr/bin:/usr/sbin
+
+# Source function library.
+. /etc/init.d/functions
+
+# Get config
+test -f /etc/sysconfig/percona-clustercheck && . /etc/sysconfig/percona-clustercheck
+
+RETVAL=0
+
+prog="clustercheck.py"
+pid="/var/run/percona-clustercheck.pid"
+
+start(){
+    [ -f /usr/sbin/$prog ] || exit 5
+
+    echo -n $"Starting $prog: "
+
+#    $prog --available-when-donor=$AWD --cache-time=$CACHE --conf=$CNF --port=$PORT >> $LOGFILE 2>&1 &
+    $prog --cache-time=$CACHE --conf=$CNF --port=$PORT >> $LOGFILE 2>&1 &
+    RETVAL=$?
+    ps -eaf | grep $prog | grep python | awk '{print $2}' > $pid
+    echo
+    [ $RETVAL -eq 0 ] && touch /var/lock/subsys/percona-clustercheck
+    return $RETVAL
+}
+
+stop(){
+    [ -f /usr/sbin/$prog ] || exit 5
+
+    RETVAL=0
+    if [ -f $pid ] ; then
+        echo -n $"Stopping $prog: "
+        kill `cat $pid`
+        rm $pid
+        RETVAL=$?
+        echo
+        [ $RETVAL -eq 0 ] && rm -f /var/lock/subsys/percona-clustercheck
+    fi
+    return $RETVAL
+}
+
+restart(){
+    stop
+    start
+}
+
+clu_status(){
+    if [ -e /var/lock/subsys/percona-clustercheck ] ; then
+        if [ -e $pid ]; then
+            p=`cat $pid`
+            echo "$prog ($p) is running"
+        else
+            echo "$prog is locked but dead"
+        fi
+    else 
+        echo "$prog is not running"
+    fi
+    RETVAL=0
+}
+
+condrestart(){
+    if [ -e /var/lock/subsys/percona-clustercheck ] ; then
+        restart
+        RETVAL=$?
+        return $RETVAL
+    fi
+    RETVAL=0
+    return $RETVAL
+}
+
+
+# See how we were called.
+case "$1" in
+    start)
+	start
+	RETVAL=$?
+	;;
+    stop)
+	stop
+	RETVAL=$?
+	;;
+    status)
+	clu_status
+	RETVAL=$?
+	;;
+    restart)
+	restart
+	RETVAL=$?
+	;;
+    condrestart|try-restart)
+	condrestart
+	RETVAL=$?
+	;;
+    *)
+	echo $"Usage: $0 {start|stop|status|restart|condrestart}"
+	RETVAL=2
+esac
+
+exit $RETVAL
