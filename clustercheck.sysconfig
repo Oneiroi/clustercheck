@@ -1,0 +1,14 @@
+#Available when donor (Default: 0)
+#AWD=0
+#Disable when read only (Default: False)
+#DWRO=false
+#Cache time in seconds (Default: 1)
+#CACHE=1
+#Mysql Config file to use (Default: ~/.my.cnf)
+#CNF=~"/.my.cnf"
+#Listen port (Default: 8000)
+#PORT=8000
+#Enable ipv6 (dsiables ipv6) (Default: False)
+#IPV6=false
+#Set ipv4 listen address (Default:0.0.0.0)
+#IPv4="0.0.0.0"

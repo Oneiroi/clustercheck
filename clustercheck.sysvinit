@@ -1,13 +1,13 @@
 #!/bin/bash
 #
-# percona-clustercheck	This script starts/stops the clustercheck.py daemon
+# clustercheck	This script starts/stops the clustercheck.py daemon
 #
 # chkconfig: 345 00 90
 # description: clustercheck.py is a script to allow clients to check the \
 # 		health status of nodes in a percona cluster
 #
 # processname: /usr/sbin/clustercheck.py
-# config: /etc/sysconfig/percona-clustercheck
+# config: /etc/sysconfig/clustercheck
 
 
 ### BEGIN INIT INFO
@@ -29,40 +29,42 @@ PATH=/sbin:/bin:/usr/bin:/usr/sbin
 . /etc/init.d/functions
 
 # Get config
-test -f /etc/sysconfig/percona-clustercheck && . /etc/sysconfig/percona-clustercheck
+test -f /etc/sysconfig/clustercheck && . /etc/sysconfig/percona-python-clustercheck
 
 RETVAL=0
 
-prog="clustercheck.py"
-pid="/var/run/percona-clustercheck.pid"
+prog="clustercheck"
+exec=`type clustercheck | awk '{print $3}'`
+pidfile="/var/run/$prog.pid"
+lockfile="/var/lock/subsys/$prog"
+args="/etc/sysconfig/clustercheck"
 
 start(){
-    [ -f /usr/sbin/$prog ] || exit 5
-
-    echo -n $"Starting $prog: "
-
-#    $prog --available-when-donor=$AWD --cache-time=$CACHE --conf=$CNF --port=$PORT >> $LOGFILE 2>&1 &
-    $prog --cache-time=$CACHE --conf=$CNF --port=$PORT >> $LOGFILE 2>&1 &
-    RETVAL=$?
-    ps -eaf | grep $prog | grep python | awk '{print $2}' > $pid
+    [ -x $exec ] || exit 5
+    [ -f $args ] && . $args || exit 6
+    #build the command based on optional arguments 
+    cmd="$exec"
+    [ -z "${AWD}" ] || cmd+=" -a"
+    [ $DWRO == true ] || cmd+=" -r"
+    [ -z "${CACHE}" ] || cmd+=" c ${CACHE}"
+    [ -z "${CNF}" ] || cmd+=" -f ${CNF}"
+    [ -z "${PORT}" ] || cmd+=" -p ${PORT}"
+    [ $IPV6 == true && -z "${IPV4}" ] || cmd+=" -6"
+    [ -z "${IPV4}" ] || cmd+=" -4 ${IPV4}"
+    daemon --prodfile $pidfilr "$cmd &>/dev/null & echo \$! > $pidfile"
+    retval=$?
     echo
-    [ $RETVAL -eq 0 ] && touch /var/lock/subsys/percona-clustercheck
-    return $RETVAL
+    [ $retval -eq 0 ] && touch $lockfile
+    return $retval
 }
 
 stop(){
-    [ -f /usr/sbin/$prog ] || exit 5
-
-    RETVAL=0
-    if [ -f $pid ] ; then
-        echo -n $"Stopping $prog: "
-        kill `cat $pid`
-        rm $pid
-        RETVAL=$?
-        echo
-        [ $RETVAL -eq 0 ] && rm -f /var/lock/subsys/percona-clustercheck
-    fi
-    return $RETVAL
+    echo -n $"Stopping $prog: "
+    killproc -p $pidfile $prog
+    retval=$?
+    echo
+    [ $retval -eq 0 ] && rm -f $lockfile
+    return $retval
 }
 
 restart(){
@@ -71,7 +73,7 @@ restart(){
 }
 
 clu_status(){
-    if [ -e /var/lock/subsys/percona-clustercheck ] ; then
+    if [ -e /var/lock/subsys/clustercheck ] ; then
         if [ -e $pid ]; then
             p=`cat $pid`
             echo "$prog ($p) is running"
@@ -85,7 +87,7 @@ clu_status(){
 }
 
 condrestart(){
-    if [ -e /var/lock/subsys/percona-clustercheck ] ; then
+    if [ -e /var/lock/subsys/clustercheck ] ; then
         restart
         RETVAL=$?
         return $RETVAL
