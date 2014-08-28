@@ -1,7 +1,7 @@
 Name: clustercheck
 Version: @VERSION@
 Release: %{?dist}
-Summary: Percona Pythong Clustercheck
+Summary: Percona Python Clustercheck
 
 %define dirname percona_python_clustercheck
 
