@@ -60,8 +60,9 @@ class clustercheck(BaseHTTPServer.BaseHTTPRequestHandler):
                 curs.execute("SHOW VARIABLES LIKE 'read_only'")
                 ro = curs.fetchone()
                 if ro['Value'].lower() in ('on','1'):
-                    res = () #read_only is set and opts.disable_when_ro is also set, we should return this node as down
                     opts.is_ro = True
+                else:
+                    opts.is_ro = False
 
             if len(res) == 0:
                 opts.last_query_result = 0
@@ -69,6 +70,12 @@ class clustercheck(BaseHTTPServer.BaseHTTPRequestHandler):
                 self.send_header("Content-type", "text/html")
                 self.end_headers()
                 self.wfile.write("Percona XtraDB Cluster Node state could not be retrieved.")
+            elif opts.disable_when_ro and opts.is_ro:
+                opts.last_query_result = res[0]['Value']
+                self.send_response(503)
+                self.send_header("Content-type", "text/html")
+                self.end_headers()
+                self.wfile.write("Percona XtraDB Cluster Node is in read-only mode.")
 
             elif res[0]['Value'] == '4' or (int(opts.available_when_donor) == 1 and res[0]['Value'] == '2'):
                 opts.last_query_result = res[0]['Value']
@@ -88,7 +95,12 @@ class clustercheck(BaseHTTPServer.BaseHTTPRequestHandler):
                 opts.being_updated = False
         else:
         #use cache result
-            if opts.last_query_result == '4' or (int(opts.available_when_donor) == 1 and opts.last_query_result == '2'):
+            if opts.is_ro and opts.disable_when_ro:
+                self.send_response(503)
+                self.send_header("Content-type", "text/html")
+                self.end_headers()
+                self.wfile.write("CACHED: Percona XtraDB Cluster Node is in read-only mode.")
+            elif opts.last_query_result == '4' or (int(opts.available_when_donor) == 1 and opts.last_query_result == '2'):
                 self.send_response(200)
                 self.send_header("Content-type", "text/html")
                 self.end_headers()
