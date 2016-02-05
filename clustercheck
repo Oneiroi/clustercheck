@@ -86,6 +86,8 @@ class ServerStatus(resource.Resource):
             request.setResponseCode(503)
             request.setHeader("Content-type", "text/html")
             httpres = "Percona XtraDB Cluster Node state could not be retrieved."
+            res=()
+            opts.last_query_response = res
         elif res[0]['Value'] == '4' or (int(opts.available_when_donor) == 1 and res[0]['Value'] == '2'):
             request.setResponseCode(200)
             request.setHeader("Content-type", "text/html")
