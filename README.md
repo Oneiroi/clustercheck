@@ -1,3 +1,8 @@
+NOTICE
+======
+
+# Master is no longer maintained except for bug fixes, use the twisted branch for production deployments where able to do so
+
 clustercheck
 ============
 
