@@ -32,6 +32,21 @@ class clustercheck(BaseHTTPServer.BaseHTTPRequestHandler):
     def do_OPTIONS(self):
         self.do_GET()
 
+    def do_send_response(self, code, message):
+        # Send a simple text/html response. However if the connection has closed
+        # gracefully continue. This allows the database conn to be closed if
+        # necessary and to clea the being_updated flag.
+        # NOTE(jhesketh): this doesn't stop exceptions from being logged as the
+        # cleanup done by SocketServer still tries to flush before closing the
+        # connection
+        try:
+            self.send_response(code)
+            self.send_header("Content-type", "text/html")
+            self.end_headers()
+            self.wfile.write(message)
+        except socket.error as e:
+            pass
+
     def do_GET(self):
         ctime = time.time()
         if ((ctime - opts.last_query_time) > opts.cache_time) and opts.being_updated == False:
@@ -65,23 +80,14 @@ class clustercheck(BaseHTTPServer.BaseHTTPRequestHandler):
 
             if len(res) == 0:
                 opts.last_query_result = 0
-                self.send_response(503)
-                self.send_header("Content-type", "text/html")
-                self.end_headers()
-                self.wfile.write("Percona XtraDB Cluster Node state could not be retrieved.")
+                self.do_send_response(503, "Percona XtraDB Cluster Node state could not be retrieved.")
 
             elif res[0]['Value'] == '4' or (int(opts.available_when_donor) == 1 and res[0]['Value'] == '2'):
                 opts.last_query_result = res[0]['Value']
-                self.send_response(200)
-                self.send_header("Content-type", "text/html")
-                self.end_headers()
-                self.wfile.write("Percona XtraDB Cluster Node is synced.")
+                self.do_send_response(200, "Percona XtraDB Cluster Node is synced.")
             else:
                 opts.last_query_result = res[0]['Value']
-                self.send_response(503)
-                self.send_header("Content-type", "text/html")
-                self.end_headers()
-                self.wfile.write("Percona XtraDB Cluster Node is not synced.")
+                self.do_send_response(503, "Percona XtraDB Cluster Node is not synced.")
 
             if conn:
                 conn.close()
@@ -89,15 +95,9 @@ class clustercheck(BaseHTTPServer.BaseHTTPRequestHandler):
         else:
         #use cache result
             if opts.last_query_result == '4' or (int(opts.available_when_donor) == 1 and opts.last_query_result == '2'):
-                self.send_response(200)
-                self.send_header("Content-type", "text/html")
-                self.end_headers()
-                self.wfile.write("CACHED: Percona XtraDB Cluster Node is synced.")
+                self.do_send_response(200, "CACHED: Percona XtraDB Cluster Node is synced.")
             else:
-                self.send_response(503)
-                self.send_header("Content-type", "text/html")
-                self.end_headers()
-                self.wfile.write("CACHED: Percona XtraDB Cluster Node is not synced.")
+                self.do_send_response(503, "CACHED: Percona XtraDB Cluster Node is not synced.")
 
 """
 Usage:
