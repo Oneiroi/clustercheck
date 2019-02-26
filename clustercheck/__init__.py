@@ -31,6 +31,7 @@ class opts:
     being_updated        = False
     # Overriding the connect timeout so that status check doesn't hang
     c_timeout              = 10
+    r_timeout              = 5
 
 class ServerStatus(resource.Resource):
     isLeaf = True
@@ -56,6 +57,7 @@ class ServerStatus(resource.Resource):
             try:
                 conn = pymysql.connect(read_default_file = opts.cnf_file,
                                        connect_timeout = opts.c_timeout,
+                                       read_timeout = opts.r_timeout,
                                        cursorclass = pymysql.cursors.DictCursor)
 
                 if conn:
