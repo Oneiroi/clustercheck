@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 
+import argparse
 import sys
 from twisted.web import server, resource
 from twisted.internet import reactor
 import MySQLdb
 import MySQLdb.cursors
-import optparse
 import time
 import logging
 
