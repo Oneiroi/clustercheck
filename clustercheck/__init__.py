@@ -7,6 +7,7 @@ from twisted.internet import reactor
 import MySQLdb
 import MySQLdb.cursors
 import time
+import logging
 
 '''
 __author__="See AUTHORS.txt at https://github.com/Oneiroi/clustercheck"
@@ -15,6 +16,9 @@ __license__="GNU v3 + section 7: Redistribution/Reuse of this code is permitted 
 __dependencies__="MySQLdb (python26-mysqldb (el5) / MySQL-python (el6) / python-mysqldb (ubuntu) / python-twisted >= 12.2)"
 __description__="Provides a stand alone http service, evaluating wsrep_local_state intended for use with HAProxy. Listens on 8000"
 '''
+
+logger = logging.getLogger(__name__)
+
 
 class opts:
     available_when_donor = 0
@@ -70,8 +74,9 @@ class ServerStatus(resource.Resource):
                     conn.close() #we're done with the connection let's not hang around
                     opts.being_updated = False #reset the flag
 
-            except MySQLdb.OperationalError:
+            except MySQLdb.OperationalError as e:
                 opts.being_updated = False #corrects bug where the flag is never reset on a communication failiure
+                logger.exception()
         else:
             #add some informational headers
             request.setHeader("X-Cache", True)
@@ -88,15 +93,17 @@ class ServerStatus(resource.Resource):
             httpres = "Percona XtraDB Cluster Node state could not be retrieved."
             res=()
             opts.last_query_response = res
+            logger.warning('{} (503)'.format(httpres))
         elif res[0]['Value'] == '4' or (int(opts.available_when_donor) == 1 and res[0]['Value'] == '2'):
             request.setResponseCode(200)
             request.setHeader("Content-type", "text/html")
             httpres = "Percona XtraDB Cluster Node is synced."
+            logger.debug('{} (200)'.format(httpres))
         else:
             request.setResponseCode(503)
             request.setHeader("Content-type", "text/html")
             httpres = "Percona XtraDB Cluster Node is not synced."
-
+            logger.warning('{} (503)'.format(httpres))
 
         return httpres
 
@@ -108,22 +115,26 @@ curl http://127.0.0.1:8000
 
 """
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-a','--available-when-donor', dest='awd', default=0, help="Available when donor [default: %(default)s]")
-    parser.add_argument('-r','--disable-when-readonly', action='store_true', dest='dwr', default=False, help="Disable when read_only flag is set (desirable when wanting to take a node out of the cluster wihtout desync) [default: %(default)s]")
-    parser.add_argument('-c','--cache-time', dest='cache', default=1, help="Cache the last response for N seconds [default: %(default)s]")
-    parser.add_argument('-f','--conf', dest='cnf', default='~/.my.cnf', help="MySQL Config file to use [default: %(default)s]")
-    parser.add_argument('-p','--port', dest='port', default=8000, help="Port to listen on [default: %(default)s]")
-    parser.add_argument('-6','--ipv6', dest='ipv6', action='store_true', default=False, help="Listen to ipv6 only (disabled ipv4) [default: %(default)s]")
-    parser.add_argument('-4','--ipv4', dest='ipv4', default='0.0.0.0', help="Listen to ipv4 on this address [default: %(default)s]")
+    parser = optparse.OptionParser()
+    parser.add_option('-a','--available-when-donor', dest='awd', default=0, help="Available when donor [default: %default]")
+    parser.add_option('-r','--disable-when-readonly', action='store_true', dest='dwr', default=False, help="Disable when read_only flag is set (desirable when wanting to take a node out of the cluster wihtout desync) [default: %default]")
+    parser.add_option('-c','--cache-time', dest='cache', default=1, help="Cache the last response for N seconds [default: %default]")
+    parser.add_option('-f','--conf', dest='cnf', default='~/.my.cnf', help="MySQL Config file to use [default: %default]")
+    parser.add_option('-p','--port', dest='port', default=8000, help="Port to listen on [default: %default]")
+    parser.add_option('-6','--ipv6', dest='ipv6', action='store_true', default=False, help="Listen to ipv6 only (disabled ipv4) [default: %default]")
+    parser.add_option('-4','--ipv4', dest='ipv4', default='0.0.0.0', help="Listen to ipv4 on this address [default: %default]")
+    options, args             = parser.parse_args()
+    opts.available_when_donor = options.awd
+    opts.disable_when_ro      = options.dwr
+    opts.cnf_file             = options.cnf
+    opts.cache_time           = int(options.cache)
 
-    args = parser.parse_args()
-    opts.available_when_donor = args.awd
-    opts.disable_when_ro      = args.dwr
-    opts.cnf_file             = args.cnf
-    opts.cache_time           = int(args.cache)
+    bind = "::" if options.ipv6 else options.ipv4
 
-    bind = "::" if args.ipv6 else args.ipv4
+    # configure logging
+    logging.basicConfig(format='%(asctime)s - %(levelname)s - %(message)s',
+                        level=logging.INFO)
 
-    reactor.listenTCP(int(args.port), server.Site(ServerStatus()), interface=bind)
+    logger.info('Starting clustercheck...')
+    reactor.listenTCP(int(options.port), server.Site(ServerStatus()), interface=bind)
     reactor.run()
