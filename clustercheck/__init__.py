@@ -4,8 +4,8 @@ import argparse
 import sys
 from twisted.web import server, resource
 from twisted.internet import reactor
-import MySQLdb
-import MySQLdb.cursors
+import pymysql
+import pymysql.cursors
 import time
 import logging
 
@@ -13,7 +13,7 @@ import logging
 __author__="See AUTHORS.txt at https://github.com/Oneiroi/clustercheck"
 __copyright__="David Busby, Percona Ireland Ltd"
 __license__="GNU v3 + section 7: Redistribution/Reuse of this code is permitted under the GNU v3 license, as an additional term ALL code must carry the original Author(s) credit in comment form."
-__dependencies__="MySQLdb (python26-mysqldb (el5) / MySQL-python (el6) / python-mysqldb (ubuntu) / python-twisted >= 12.2)"
+__dependencies__="PyMySQL (rh-python35-python-PyMySQL (el6) / python-pymysql (ubuntu) / python-PyMySQL (openSUSE) / python-twisted >= 12.2)"
 __description__="Provides a stand alone http service, evaluating wsrep_local_state intended for use with HAProxy. Listens on 8000"
 '''
 
@@ -34,7 +34,7 @@ class opts:
 
 class ServerStatus(resource.Resource):
     isLeaf = True
-    
+
     def render_OPTIONS(self, request):
         return self.render_GET(request)
 
@@ -54,9 +54,9 @@ class ServerStatus(resource.Resource):
             request.setHeader("X-Cache", [False, ])
 
             try:
-                conn = MySQLdb.connect(read_default_file = opts.cnf_file,
+                conn = pymysql.connect(read_default_file = opts.cnf_file,
                                        connect_timeout = opts.c_timeout,
-                                       cursorclass = MySQLdb.cursors.DictCursor)
+                                       cursorclass = pymysql.cursors.DictCursor)
 
                 if conn:
                     curs = conn.cursor()
