@@ -7,6 +7,7 @@ import MySQLdb
 import MySQLdb.cursors
 import optparse
 import time
+import logging
 
 '''
 __author__="See AUTHORS.txt at https://github.com/Oneiroi/clustercheck"
@@ -15,6 +16,9 @@ __license__="GNU v3 + section 7: Redistribution/Reuse of this code is permitted 
 __dependencies__="MySQLdb (python26-mysqldb (el5) / MySQL-python (el6) / python-mysqldb (ubuntu) / python-twisted >= 12.2)"
 __description__="Provides a stand alone http service, evaluating wsrep_local_state intended for use with HAProxy. Listens on 8000"
 '''
+
+logger = logging.getLogger(__name__)
+
 
 class opts:
     available_when_donor = 0
@@ -70,8 +74,9 @@ class ServerStatus(resource.Resource):
                     conn.close() #we're done with the connection let's not hang around
                     opts.being_updated = False #reset the flag
 
-            except MySQLdb.OperationalError:
+            except MySQLdb.OperationalError as e:
                 opts.being_updated = False #corrects bug where the flag is never reset on a communication failiure
+                logger.exception()
         else:
             #add some informational headers
             request.setHeader("X-Cache", True)
@@ -88,15 +93,17 @@ class ServerStatus(resource.Resource):
             httpres = "Percona XtraDB Cluster Node state could not be retrieved."
             res=()
             opts.last_query_response = res
+            logger.warning('{} (503)'.format(httpres))
         elif res[0]['Value'] == '4' or (int(opts.available_when_donor) == 1 and res[0]['Value'] == '2'):
             request.setResponseCode(200)
             request.setHeader("Content-type", "text/html")
             httpres = "Percona XtraDB Cluster Node is synced."
+            logger.debug('{} (200)'.format(httpres))
         else:
             request.setResponseCode(503)
             request.setHeader("Content-type", "text/html")
             httpres = "Percona XtraDB Cluster Node is not synced."
-
+            logger.warning('{} (503)'.format(httpres))
 
         return httpres
 
@@ -124,5 +131,10 @@ if __name__ == '__main__':
 
     bind = "::" if options.ipv6 else options.ipv4
 
+    # configure logging
+    logging.basicConfig(format='%(asctime)s - %(levelname)s - %(message)s',
+                        level=logging.INFO)
+
+    logger.info('Starting clustercheck...')
     reactor.listenTCP(int(options.port), server.Site(ServerStatus()), interface=bind)
     reactor.run()
