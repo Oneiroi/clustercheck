@@ -2,3 +2,4 @@ David Busby <oneiroi@fedoraproject.org> / <david.busby@percona.com>
 Raghavendra Prabhu <raghavendra.prabhu@percona.com> / <rprabhu@wnohang.net>
 Adrian Lopez <adrianlzt@gmail.com>
 lefred & grypryg from Belcona
+Thomas Bechtold <tbechtold@suse.com>

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from setuptools import setup
+from setuptools import setup, find_packages
 
 setup(name='clustercheck',
       use_scm_version=True,
@@ -13,5 +13,5 @@ setup(name='clustercheck',
       author='David Busby',
       author_email='oneiroi@fedoraproject.org',
       url='https://github.com/Oneiroi/clustercheck/',
-      packages=['clustercheck'],
+      packages=find_packages(),
 )
