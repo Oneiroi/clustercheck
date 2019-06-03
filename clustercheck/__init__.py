@@ -13,7 +13,6 @@ import logging
 __author__="See AUTHORS.txt at https://github.com/Oneiroi/clustercheck"
 __copyright__="David Busby, Percona Ireland Ltd"
 __license__="GNU v3 + section 7: Redistribution/Reuse of this code is permitted under the GNU v3 license, as an additional term ALL code must carry the original Author(s) credit in comment form."
-__dependencies__="PyMySQL (rh-python35-python-PyMySQL (el6) / python-pymysql (ubuntu) / python-PyMySQL (openSUSE) / python-twisted >= 12.2)"
 __description__="Provides a stand alone http service, evaluating wsrep_local_state intended for use with HAProxy. Listens on 8000"
 '''
 
