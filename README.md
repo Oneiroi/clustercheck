@@ -10,6 +10,12 @@ This version is rewritten to use Python twisted, so this module is required.
 To start at run time:
 echo "/usr/bin/pyclustercheck -f /etc/my.cnf > /var/log/messages 2>&1 &" >> /etc/rc.local
 
+Running the testsuite
+=====================
+Currently there are only linter tests available. Theses can be executed via `tox`:
+
+    tox -epep8
+
 Contribute
 ==========
 
