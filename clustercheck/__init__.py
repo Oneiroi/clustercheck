@@ -75,9 +75,9 @@ class ServerStatus(resource.Resource):
                     conn.close() #we're done with the connection let's not hang around
                     opts.being_updated = False #reset the flag
 
-            except MySQLdb.OperationalError as e:
+            except pymysql.OperationalError as e:
                 opts.being_updated = False #corrects bug where the flag is never reset on a communication failiure
-                logger.exception()
+                logger.exception("Can not get wsrep status")
         else:
             #add some informational headers
             request.setHeader("X-Cache", True)
