@@ -20,16 +20,16 @@ logger = logging.getLogger(__name__)
 
 class opts:
     available_when_donor = 0
-    disable_when_ro      = 0
-    is_ro                = 0
-    cache_time           = 1
-    last_query_time      = 0
-    last_query_result    = 0
-    cnf_file             = '~/.my.cnf'
-    being_updated        = False
+    disable_when_ro = 0
+    is_ro = 0
+    cache_time = 1
+    last_query_time = 0
+    last_query_result = 0
+    cnf_file = '~/.my.cnf'
+    being_updated = False
     # Overriding the connect timeout so that status check doesn't hang
-    c_timeout              = 10
-    r_timeout              = 5
+    c_timeout = 10
+    r_timeout = 5
 
 class ServerStatus(resource.Resource):
     isLeaf = True
@@ -38,11 +38,11 @@ class ServerStatus(resource.Resource):
         return self.render_GET(request)
 
     def render_GET(self, request):
-        conn    = None
-        res     = ''
+        conn = None
+        res = ''
         httpres = ''
-        ctime   = time.time()
-        ttl     = opts.last_query_time + opts.cache_time - ctime
+        ctime = time.time()
+        ttl = opts.last_query_time + opts.cache_time - ctime
         request.setHeader("Server", "PXC Python clustercheck / 2.0")
 
         if (ttl <= 0) and opts.being_updated == False:
@@ -127,9 +127,9 @@ def main():
 
     args = parser.parse_args()
     opts.available_when_donor = args.awd
-    opts.disable_when_ro      = args.dwr
-    opts.cnf_file             = args.cnf
-    opts.cache_time           = int(args.cache)
+    opts.disable_when_ro = args.dwr
+    opts.cnf_file = args.cnf
+    opts.cache_time = int(args.cache)
 
     bind = "::" if args.ipv6 else args.ipv4
 
