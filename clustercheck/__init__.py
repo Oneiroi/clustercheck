@@ -108,14 +108,6 @@ class ServerStatus(resource.Resource):
 
         return httpres
 
-"""
-Usage:
-pyclustercheck &>$LOGFILE &
-To test:
-curl http://127.0.0.1:8000
-
-"""
-
 
 def main():
     parser = argparse.ArgumentParser()
