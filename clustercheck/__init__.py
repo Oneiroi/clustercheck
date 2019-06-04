@@ -32,6 +32,15 @@ class opts:
     r_timeout = 5
 
 
+def _db_is_ro(cursor):
+    """is the database cluster node readonly?"""
+    cursor.execute("SHOW VARIABLES LIKE 'read_only'")
+    ro = cursor.fetchone()
+    if ro['Value'].lower() in ('on', '1'):
+        return True
+    return False
+
+
 class ServerStatus(resource.Resource):
     isLeaf = True
 
@@ -66,11 +75,9 @@ class ServerStatus(resource.Resource):
                     opts.last_query_response = res
 
                     if opts.disable_when_ro:
-                        curs.execute("SHOW VARIABLES LIKE 'read_only'")
-                        ro = curs.fetchone()
-                        if ro['Value'].lower() in ('on', '1'):
-                            res = ()  # read_only is set and opts.disable_when_ro is also set, we should return this node as down
+                        if _db_is_ro(curs):
                             opts.is_ro = True
+                            res = ()  # read_only is set and opts.disable_when_ro is also set, we should return this node as down
 
                     conn.close()  # we're done with the connection let's not hang around
                     opts.being_updated = False  # reset the flag

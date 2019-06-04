@@ -12,7 +12,11 @@ echo "/usr/bin/pyclustercheck -f /etc/my.cnf > /var/log/messages 2>&1 &" >> /etc
 
 Running the testsuite
 =====================
-Currently there are only linter tests available. Theses can be executed via `tox`:
+There are some basic unittests which can be called via `tox`:
+
+    tox -epy37
+
+There are also linter tests available. Theses can be executed via `tox`:
 
     tox -epep8
 
