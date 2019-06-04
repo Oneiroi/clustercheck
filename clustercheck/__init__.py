@@ -115,7 +115,8 @@ To test:
 curl http://127.0.0.1:8000
 
 """
-if __name__ == '__main__':
+
+def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-a','--available-when-donor', dest='awd', default=0, help="Available when donor [default: %(default)s]")
     parser.add_argument('-r','--disable-when-readonly', action='store_true', dest='dwr', default=False, help="Disable when read_only flag is set (desirable wen wanting to take a node out of the cluster wihtout desync) [default: %(default)s]")
@@ -140,3 +141,7 @@ if __name__ == '__main__':
     logger.info('Starting clustercheck...')
     reactor.listenTCP(int(args.port), server.Site(ServerStatus()), interface=bind)
     reactor.run()
+
+
+if __name__ == '__main__':
+    main()

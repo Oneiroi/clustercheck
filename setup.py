@@ -17,4 +17,9 @@ setup(name='clustercheck',
       author_email='oneiroi@fedoraproject.org',
       url='https://github.com/Oneiroi/clustercheck/',
       packages=find_packages(),
+      entry_points={
+          'console_scripts': [
+              'clustercheck = clustercheck:main',
+          ],
+      }
 )
