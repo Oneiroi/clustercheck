@@ -77,7 +77,7 @@ class ServerStatus(resource.Resource):
 
     def render_GET(self, request):
         conn = None
-        res = ''
+        res = None
         httpres = ''
         ctime = time.time()
         ttl = opts.last_query_time + opts.cache_time - ctime
@@ -117,7 +117,7 @@ class ServerStatus(resource.Resource):
             request.setResponseCode(503)
             request.setHeader("Content-type", "text/html")
             httpres = "Percona XtraDB Cluster Node state could not be retrieved."
-            res = ()
+            res = None
             opts.last_query_response = res
             logger.warning('{} (503)'.format(httpres))
         elif res == 4 or (int(opts.available_when_donor) == 1 and res == 2):
