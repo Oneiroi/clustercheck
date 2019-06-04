@@ -69,6 +69,18 @@ def _db_get_connection(read_default_file, connect_timeout, read_timeout):
             pass
 
 
+def _prepare_request_response_headers(request, cache_ttl):
+    # server information
+    request.setHeader("Server", "PXC Python clustercheck / 2.0")
+    request.setHeader("Content-type", "text/html")
+    # cache information
+    request.setHeader("X-Cache-TTL", "%d" % cache_ttl)
+    if cache_ttl <= 0:
+        request.setHeader("X-Cache", False)
+    else:
+        request.setHeader("X-Cache", True)
+
+
 class ServerStatus(resource.Resource):
     isLeaf = True
 
@@ -81,13 +93,10 @@ class ServerStatus(resource.Resource):
         httpres = ''
         ctime = time.time()
         ttl = opts.last_query_time + opts.cache_time - ctime
-        request.setHeader("Server", "PXC Python clustercheck / 2.0")
 
         if ttl <= 0:
-            # cache expired
+            # cache expired - update data
             opts.last_query_time = ctime
-            # add some informational headers
-            request.setHeader("X-Cache", [False, ])
 
             try:
                 with _db_get_connection(
@@ -104,30 +113,26 @@ class ServerStatus(resource.Resource):
 
             except pymysql.OperationalError as e:  # noqa
                 logger.exception("Can not get wsrep status")
+
         else:
-            # add some informational headers
-            request.setHeader("X-Cache", True)
-            request.setHeader("X-Cache-TTL", "%d" % ttl)
-            request.setHeader("X-Cache-disable-when-RO", opts.disable_when_ro)
-            request.setHeader("X-Cache-node-is-RO", opts.is_ro)
             # run from cached response
             res = opts.last_query_response
 
+        # add headers to response
+        _prepare_request_response_headers(request, ttl)
+
         if res is None:
             request.setResponseCode(503)
-            request.setHeader("Content-type", "text/html")
             httpres = "Percona XtraDB Cluster Node state could not be retrieved."
             res = None
             opts.last_query_response = res
             logger.warning('{} (503)'.format(httpres))
         elif res == 4 or (int(opts.available_when_donor) == 1 and res == 2):
             request.setResponseCode(200)
-            request.setHeader("Content-type", "text/html")
             httpres = "Percona XtraDB Cluster Node is synced."
             logger.debug('{} (200)'.format(httpres))
         else:
             request.setResponseCode(503)
-            request.setHeader("Content-type", "text/html")
             httpres = "Percona XtraDB Cluster Node is not synced."
             logger.warning('{} (503)'.format(httpres))
 
