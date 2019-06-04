@@ -14,7 +14,7 @@ class Transaction(object):
         resp.read()
         latency = time.time() - start
         self.custom_timers['Cluster_check_latency'] = latency
-        assert (resp.code in (200,503)), 'Bad HTTP Response'
+        assert (resp.code in (200, 503)), 'Bad HTTP Response'
 
 
 if __name__ == '__main__':

@@ -117,13 +117,13 @@ curl http://127.0.0.1:8000
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-a','--available-when-donor', dest='awd', default=0, help="Available when donor [default: %(default)s]")
-    parser.add_argument('-r','--disable-when-readonly', action='store_true', dest='dwr', default=False, help="Disable when read_only flag is set (desirable wen wanting to take a node out of the cluster wihtout desync) [default: %(default)s]")
-    parser.add_argument('-c','--cache-time', dest='cache', default=1, help="Cache the last response for N seconds [default: %(default)s]")
-    parser.add_argument('-f','--conf', dest='cnf', default='~/.my.cnf', help="MySQL Config file to use [default: %(default)s]")
-    parser.add_argument('-p','--port', dest='port', default=8000, help="Port to listen on [default: %(default)s]")
-    parser.add_argument('-6','--ipv6', dest='ipv6', action='store_true', default=False, help="Listen to ipv6 only (disabled ipv4) [default: %(default)s]")
-    parser.add_argument('-4','--ipv4', dest='ipv4', default='0.0.0.0', help="Listen to ipv4 on this address [default: %(default)s]")
+    parser.add_argument('-a', '--available-when-donor', dest='awd', default=0, help="Available when donor [default: %(default)s]")
+    parser.add_argument('-r', '--disable-when-readonly', action='store_true', dest='dwr', default=False, help="Disable when read_only flag is set (desirable wen wanting to take a node out of the cluster wihtout desync) [default: %(default)s]")
+    parser.add_argument('-c', '--cache-time', dest='cache', default=1, help="Cache the last response for N seconds [default: %(default)s]")
+    parser.add_argument('-f', '--conf', dest='cnf', default='~/.my.cnf', help="MySQL Config file to use [default: %(default)s]")
+    parser.add_argument('-p', '--port', dest='port', default=8000, help="Port to listen on [default: %(default)s]")
+    parser.add_argument('-6', '--ipv6', dest='ipv6', action='store_true', default=False, help="Listen to ipv6 only (disabled ipv4) [default: %(default)s]")
+    parser.add_argument('-4', '--ipv4', dest='ipv4', default='0.0.0.0', help="Listen to ipv4 on this address [default: %(default)s]")
 
     args = parser.parse_args()
     opts.available_when_donor = args.awd
