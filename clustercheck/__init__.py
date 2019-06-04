@@ -48,7 +48,7 @@ class ServerStatus(resource.Resource):
 
         if (ttl <= 0) and opts.being_updated == False:
             # cache expired
-            opts.being_updated = True #prevent mutliple threads falling through to MySQL for update
+            opts.being_updated = True  # prevent mutliple threads falling through to MySQL for update
             opts.last_query_time = ctime
             # add some informational headers
             request.setHeader("X-Cache", [False, ])
@@ -69,14 +69,14 @@ class ServerStatus(resource.Resource):
                         curs.execute("SHOW VARIABLES LIKE 'read_only'")
                         ro = curs.fetchone()
                         if ro['Value'].lower() in ('on', '1'):
-                            res = () #read_only is set and opts.disable_when_ro is also set, we should return this node as down
+                            res = ()  # read_only is set and opts.disable_when_ro is also set, we should return this node as down
                             opts.is_ro = True
 
-                    conn.close() #we're done with the connection let's not hang around
-                    opts.being_updated = False #reset the flag
+                    conn.close()  # we're done with the connection let's not hang around
+                    opts.being_updated = False  # reset the flag
 
             except pymysql.OperationalError as e:  # noqa
-                opts.being_updated = False #corrects bug where the flag is never reset on a communication failiure
+                opts.being_updated = False  # corrects bug where the flag is never reset on a communication failiure
                 logger.exception("Can not get wsrep status")
         else:
             # add some informational headers
