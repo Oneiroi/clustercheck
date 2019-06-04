@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import argparse
+from contextlib import contextmanager
 from twisted.web import server, resource
 from twisted.internet import reactor
 import pymysql
@@ -54,6 +55,21 @@ def _db_get_wsrep_local_state(cursor):
     return None
 
 
+@contextmanager
+def _db_get_connection(read_default_file, connect_timeout, read_timeout):
+    try:
+        conn = pymysql.connect(read_default_file=read_default_file,
+                               connect_timeout=connect_timeout,
+                               read_timeout=read_timeout,
+                               cursorclass=pymysql.cursors.DictCursor)
+        yield conn
+    finally:
+        try:
+            conn.close()
+        except:  # noqa
+            pass
+
+
 class ServerStatus(resource.Resource):
     isLeaf = True
 
@@ -76,23 +92,19 @@ class ServerStatus(resource.Resource):
             request.setHeader("X-Cache", [False, ])
 
             try:
-                conn = pymysql.connect(read_default_file=opts.cnf_file,
-                                       connect_timeout=opts.c_timeout,
-                                       read_timeout=opts.r_timeout,
-                                       cursorclass=pymysql.cursors.DictCursor)
+                with _db_get_connection(
+                        opts.cnf_file, opts.c_timeout, opts.r_timeout) as conn:
+                    if conn:
+                        curs = conn.cursor()
+                        res = _db_get_wsrep_local_state(curs)
+                        opts.last_query_response = res
 
-                if conn:
-                    curs = conn.cursor()
-                    res = _db_get_wsrep_local_state(curs)
-                    opts.last_query_response = res
+                        if opts.disable_when_ro:
+                            if _db_is_ro(curs):
+                                opts.is_ro = True
+                                res = None  # read_only is set and opts.disable_when_ro is also set, we should return this node as down
 
-                    if opts.disable_when_ro:
-                        if _db_is_ro(curs):
-                            opts.is_ro = True
-                            res = None  # read_only is set and opts.disable_when_ro is also set, we should return this node as down
-
-                    conn.close()  # we're done with the connection let's not hang around
-                    opts.being_updated = False  # reset the flag
+                        opts.being_updated = False  # reset the flag
 
             except pymysql.OperationalError as e:  # noqa
                 opts.being_updated = False  # corrects bug where the flag is never reset on a communication failiure

@@ -53,3 +53,16 @@ class TestClustercheck(unittest.TestCase):
         res = clustercheck._db_get_wsrep_local_state(cursor_mock)
         cursor_mock.called_once_with()
         self.assertEqual(res, None)
+
+    @mock.patch('clustercheck.pymysql.cursors.DictCursor')
+    @mock.patch('clustercheck.pymysql.connect')
+    def test__db_get_connection(self, pymysql_connect_mock,
+                                pymysql_cursor_mock):
+        with clustercheck._db_get_connection(None, None, None) as conn:
+            pass
+        pymysql_connect_mock.assert_called_once_with(
+            read_default_file=None,
+            connect_timeout=None,
+            read_timeout=None,
+            cursorclass=pymysql_cursor_mock)
+        conn.close.assert_called()
