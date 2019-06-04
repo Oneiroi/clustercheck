@@ -88,7 +88,6 @@ class ServerStatus(resource.Resource):
         return self.render_GET(request)
 
     def render_GET(self, request):
-        conn = None
         res = None
         httpres = ''
         ctime = time.time()
