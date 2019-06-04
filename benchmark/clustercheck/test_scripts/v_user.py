@@ -20,4 +20,4 @@ class Transaction(object):
 if __name__ == '__main__':
     trans = Transaction()
     trans.run()
-    print trans.custom_timers
+    print(trans.custom_timers)
