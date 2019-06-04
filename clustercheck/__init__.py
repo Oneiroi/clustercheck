@@ -46,7 +46,7 @@ class ServerStatus(resource.Resource):
         ttl = opts.last_query_time + opts.cache_time - ctime
         request.setHeader("Server", "PXC Python clustercheck / 2.0")
 
-        if (ttl <= 0) and opts.being_updated == False:
+        if (ttl <= 0) and opts.being_updated is False:
             # cache expired
             opts.being_updated = True  # prevent mutliple threads falling through to MySQL for update
             opts.last_query_time = ctime
