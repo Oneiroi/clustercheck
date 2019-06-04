@@ -54,10 +54,10 @@ class ServerStatus(resource.Resource):
             request.setHeader("X-Cache", [False, ])
 
             try:
-                conn = pymysql.connect(read_default_file = opts.cnf_file,
-                                       connect_timeout = opts.c_timeout,
-                                       read_timeout = opts.r_timeout,
-                                       cursorclass = pymysql.cursors.DictCursor)
+                conn = pymysql.connect(read_default_file=opts.cnf_file,
+                                       connect_timeout=opts.c_timeout,
+                                       read_timeout=opts.r_timeout,
+                                       cursorclass=pymysql.cursors.DictCursor)
 
                 if conn:
                     curs = conn.cursor()
