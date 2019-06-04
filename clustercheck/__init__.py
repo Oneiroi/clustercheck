@@ -96,6 +96,7 @@ class ServerStatus(resource.Resource):
         if ttl <= 0:
             # cache expired - update data
             opts.last_query_time = ctime
+            opts.last_query_response = None
 
             try:
                 with _db_get_connection(
