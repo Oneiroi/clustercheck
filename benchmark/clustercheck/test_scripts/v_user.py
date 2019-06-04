@@ -2,6 +2,7 @@
 import time
 import mechanize
 
+
 class Transaction(object):
     def __init__(self):
         pass
@@ -14,10 +15,10 @@ class Transaction(object):
         resp.read()
         latency = time.time() - start
         self.custom_timers['Cluster_check_latency'] = latency
-        assert (resp.code in (200,503)), 'Bad HTTP Response'
+        assert (resp.code in (200, 503)), 'Bad HTTP Response'
 
 
 if __name__ == '__main__':
     trans = Transaction()
     trans.run()
-    print trans.custom_timers
+    print(trans.custom_timers)

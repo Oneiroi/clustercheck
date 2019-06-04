@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
 import argparse
-import sys
 from twisted.web import server, resource
 from twisted.internet import reactor
 import pymysql
@@ -21,16 +20,17 @@ logger = logging.getLogger(__name__)
 
 class opts:
     available_when_donor = 0
-    disable_when_ro      = 0
-    is_ro                = 0
-    cache_time           = 1
-    last_query_time      = 0
-    last_query_result    = 0
-    cnf_file             = '~/.my.cnf'
-    being_updated        = False
+    disable_when_ro = 0
+    is_ro = 0
+    cache_time = 1
+    last_query_time = 0
+    last_query_result = 0
+    cnf_file = '~/.my.cnf'
+    being_updated = False
     # Overriding the connect timeout so that status check doesn't hang
-    c_timeout              = 10
-    r_timeout              = 5
+    c_timeout = 10
+    r_timeout = 5
+
 
 class ServerStatus(resource.Resource):
     isLeaf = True
@@ -39,25 +39,25 @@ class ServerStatus(resource.Resource):
         return self.render_GET(request)
 
     def render_GET(self, request):
-        conn    = None
-        res     = ''
+        conn = None
+        res = ''
         httpres = ''
-        ctime   = time.time()
-        ttl     = opts.last_query_time + opts.cache_time - ctime
+        ctime = time.time()
+        ttl = opts.last_query_time + opts.cache_time - ctime
         request.setHeader("Server", "PXC Python clustercheck / 2.0")
 
-        if (ttl <= 0) and opts.being_updated == False:
-            #cache expired
-            opts.being_updated = True #prevent mutliple threads falling through to MySQL for update
+        if (ttl <= 0) and opts.being_updated is False:
+            # cache expired
+            opts.being_updated = True  # prevent mutliple threads falling through to MySQL for update
             opts.last_query_time = ctime
-            #add some informational headers
+            # add some informational headers
             request.setHeader("X-Cache", [False, ])
 
             try:
-                conn = pymysql.connect(read_default_file = opts.cnf_file,
-                                       connect_timeout = opts.c_timeout,
-                                       read_timeout = opts.r_timeout,
-                                       cursorclass = pymysql.cursors.DictCursor)
+                conn = pymysql.connect(read_default_file=opts.cnf_file,
+                                       connect_timeout=opts.c_timeout,
+                                       read_timeout=opts.r_timeout,
+                                       cursorclass=pymysql.cursors.DictCursor)
 
                 if conn:
                     curs = conn.cursor()
@@ -69,30 +69,30 @@ class ServerStatus(resource.Resource):
                         curs.execute("SHOW VARIABLES LIKE 'read_only'")
                         ro = curs.fetchone()
                         if ro['Value'].lower() in ('on', '1'):
-                            res = () #read_only is set and opts.disable_when_ro is also set, we should return this node as down
+                            res = ()  # read_only is set and opts.disable_when_ro is also set, we should return this node as down
                             opts.is_ro = True
 
-                    conn.close() #we're done with the connection let's not hang around
-                    opts.being_updated = False #reset the flag
+                    conn.close()  # we're done with the connection let's not hang around
+                    opts.being_updated = False  # reset the flag
 
-            except pymysql.OperationalError as e:
-                opts.being_updated = False #corrects bug where the flag is never reset on a communication failiure
+            except pymysql.OperationalError as e:  # noqa
+                opts.being_updated = False  # corrects bug where the flag is never reset on a communication failiure
                 logger.exception("Can not get wsrep status")
         else:
-            #add some informational headers
+            # add some informational headers
             request.setHeader("X-Cache", True)
             request.setHeader("X-Cache-TTL", "%d" % ttl)
             request.setHeader("X-Cache-Updating", opts.being_updated)
             request.setHeader("X-Cache-disable-when-RO", opts.disable_when_ro)
             request.setHeader("X-Cache-node-is-RO", opts.is_ro)
-            #run from cached response
+            # run from cached response
             res = opts.last_query_response
 
         if len(res) == 0:
             request.setResponseCode(503)
             request.setHeader("Content-type", "text/html")
             httpres = "Percona XtraDB Cluster Node state could not be retrieved."
-            res=()
+            res = ()
             opts.last_query_response = res
             logger.warning('{} (503)'.format(httpres))
         elif res[0]['Value'] == '4' or (int(opts.available_when_donor) == 1 and res[0]['Value'] == '2'):
@@ -108,28 +108,22 @@ class ServerStatus(resource.Resource):
 
         return httpres
 
-"""
-Usage:
-pyclustercheck &>$LOGFILE &
-To test:
-curl http://127.0.0.1:8000
 
-"""
-if __name__ == '__main__':
+def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-a','--available-when-donor', dest='awd', default=0, help="Available when donor [default: %(default)s]")
-    parser.add_argument('-r','--disable-when-readonly', action='store_true', dest='dwr', default=False, help="Disable when read_only flag is set (desirable wen wanting to take a node out of the cluster wihtout desync) [default: %(default)s]")
-    parser.add_argument('-c','--cache-time', dest='cache', default=1, help="Cache the last response for N seconds [default: %(default)s]")
-    parser.add_argument('-f','--conf', dest='cnf', default='~/.my.cnf', help="MySQL Config file to use [default: %(default)s]")
-    parser.add_argument('-p','--port', dest='port', default=8000, help="Port to listen on [default: %(default)s]")
-    parser.add_argument('-6','--ipv6', dest='ipv6', action='store_true', default=False, help="Listen to ipv6 only (disabled ipv4) [default: %(default)s]")
-    parser.add_argument('-4','--ipv4', dest='ipv4', default='0.0.0.0', help="Listen to ipv4 on this address [default: %(default)s]")
+    parser.add_argument('-a', '--available-when-donor', dest='awd', default=0, help="Available when donor [default: %(default)s]")
+    parser.add_argument('-r', '--disable-when-readonly', action='store_true', dest='dwr', default=False, help="Disable when read_only flag is set (desirable wen wanting to take a node out of the cluster wihtout desync) [default: %(default)s]")
+    parser.add_argument('-c', '--cache-time', dest='cache', default=1, help="Cache the last response for N seconds [default: %(default)s]")
+    parser.add_argument('-f', '--conf', dest='cnf', default='~/.my.cnf', help="MySQL Config file to use [default: %(default)s]")
+    parser.add_argument('-p', '--port', dest='port', default=8000, help="Port to listen on [default: %(default)s]")
+    parser.add_argument('-6', '--ipv6', dest='ipv6', action='store_true', default=False, help="Listen to ipv6 only (disabled ipv4) [default: %(default)s]")
+    parser.add_argument('-4', '--ipv4', dest='ipv4', default='0.0.0.0', help="Listen to ipv4 on this address [default: %(default)s]")
 
     args = parser.parse_args()
     opts.available_when_donor = args.awd
-    opts.disable_when_ro      = args.dwr
-    opts.cnf_file             = args.cnf
-    opts.cache_time           = int(args.cache)
+    opts.disable_when_ro = args.dwr
+    opts.cnf_file = args.cnf
+    opts.cache_time = int(args.cache)
 
     bind = "::" if args.ipv6 else args.ipv4
 
@@ -140,3 +134,7 @@ if __name__ == '__main__':
     logger.info('Starting clustercheck...')
     reactor.listenTCP(int(args.port), server.Site(ServerStatus()), interface=bind)
     reactor.run()
+
+
+if __name__ == '__main__':
+    main()
