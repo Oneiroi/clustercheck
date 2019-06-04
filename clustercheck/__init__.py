@@ -41,6 +41,19 @@ def _db_is_ro(cursor):
     return False
 
 
+def _db_get_wsrep_local_state(cursor):
+    """
+    get the WSREP local state or None
+    see http://galeracluster.com/documentation-webpages/\
+        galerastatusvariables.html#wsrep-local-state
+    """
+    cursor.execute("SHOW STATUS LIKE 'wsrep_local_state'")
+    res = cursor.fetchone()
+    if res:
+        return int(res['Value'])
+    return None
+
+
 class ServerStatus(resource.Resource):
     isLeaf = True
 
@@ -70,14 +83,13 @@ class ServerStatus(resource.Resource):
 
                 if conn:
                     curs = conn.cursor()
-                    curs.execute("SHOW STATUS LIKE 'wsrep_local_state'")
-                    res = curs.fetchall()
+                    res = _db_get_wsrep_local_state(curs)
                     opts.last_query_response = res
 
                     if opts.disable_when_ro:
                         if _db_is_ro(curs):
                             opts.is_ro = True
-                            res = ()  # read_only is set and opts.disable_when_ro is also set, we should return this node as down
+                            res = None  # read_only is set and opts.disable_when_ro is also set, we should return this node as down
 
                     conn.close()  # we're done with the connection let's not hang around
                     opts.being_updated = False  # reset the flag
@@ -95,14 +107,14 @@ class ServerStatus(resource.Resource):
             # run from cached response
             res = opts.last_query_response
 
-        if len(res) == 0:
+        if res is None:
             request.setResponseCode(503)
             request.setHeader("Content-type", "text/html")
             httpres = "Percona XtraDB Cluster Node state could not be retrieved."
             res = ()
             opts.last_query_response = res
             logger.warning('{} (503)'.format(httpres))
-        elif res[0]['Value'] == '4' or (int(opts.available_when_donor) == 1 and res[0]['Value'] == '2'):
+        elif res == 4 or (int(opts.available_when_donor) == 1 and res == 2):
             request.setResponseCode(200)
             request.setHeader("Content-type", "text/html")
             httpres = "Percona XtraDB Cluster Node is synced."

@@ -35,3 +35,21 @@ class TestClustercheck(unittest.TestCase):
         res = clustercheck._db_is_ro(cursor_mock)
         cursor_mock.called_once_with()
         self.assertEqual(res, True)
+
+    def test__db_get_wsrep_local_state(self):
+        cursor_mock = mock.MagicMock()
+        # check for available value
+        cursor_mock.fetchone.return_value = {
+            u'Value': '4',
+            u'Variable_name': 'wsrep_local_state'
+        }
+        res = clustercheck._db_get_wsrep_local_state(cursor_mock)
+        cursor_mock.called_once_with()
+        self.assertEqual(res, 4)
+
+        # check for non-available value (eg. no cluster)
+        cursor_mock.fetchone.return_value = {
+        }
+        res = clustercheck._db_get_wsrep_local_state(cursor_mock)
+        cursor_mock.called_once_with()
+        self.assertEqual(res, None)
