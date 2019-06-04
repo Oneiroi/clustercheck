@@ -46,10 +46,10 @@ class ServerStatus(resource.Resource):
         request.setHeader("Server", "PXC Python clustercheck / 2.0")
 
         if (ttl <= 0) and opts.being_updated == False:
-            #cache expired
+            # cache expired
             opts.being_updated = True #prevent mutliple threads falling through to MySQL for update
             opts.last_query_time = ctime
-            #add some informational headers
+            # add some informational headers
             request.setHeader("X-Cache", [False, ])
 
             try:
@@ -78,13 +78,13 @@ class ServerStatus(resource.Resource):
                 opts.being_updated = False #corrects bug where the flag is never reset on a communication failiure
                 logger.exception("Can not get wsrep status")
         else:
-            #add some informational headers
+            # add some informational headers
             request.setHeader("X-Cache", True)
             request.setHeader("X-Cache-TTL", "%d" % ttl)
             request.setHeader("X-Cache-Updating", opts.being_updated)
             request.setHeader("X-Cache-disable-when-RO", opts.disable_when_ro)
             request.setHeader("X-Cache-node-is-RO", opts.is_ro)
-            #run from cached response
+            # run from cached response
             res = opts.last_query_response
 
         if len(res) == 0:
