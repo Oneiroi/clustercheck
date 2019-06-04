@@ -31,6 +31,7 @@ class opts:
     c_timeout = 10
     r_timeout = 5
 
+
 class ServerStatus(resource.Resource):
     isLeaf = True
 
@@ -114,6 +115,7 @@ To test:
 curl http://127.0.0.1:8000
 
 """
+
 
 def main():
     parser = argparse.ArgumentParser()

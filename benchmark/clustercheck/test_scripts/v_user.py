@@ -2,6 +2,7 @@
 import time
 import mechanize
 
+
 class Transaction(object):
     def __init__(self):
         pass
