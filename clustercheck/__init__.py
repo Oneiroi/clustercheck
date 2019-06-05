@@ -2,12 +2,16 @@
 
 import argparse
 from contextlib import contextmanager
+from importlib import import_module
+import os
 from twisted.web import server, resource
-from twisted.internet import reactor
+from twisted.internet import reactor, task
 import pymysql
 import pymysql.cursors
 import time
 import logging
+
+from clustercheck import systemd
 
 '''
 __author__="See AUTHORS.txt at https://github.com/Oneiroi/clustercheck"
@@ -79,6 +83,14 @@ def _prepare_request_response_headers(request, cache_ttl):
         request.setHeader("X-Cache", False)
     else:
         request.setHeader("X-Cache", True)
+
+
+def _systemd_watchdog_ping(notifier):
+    notifier.send('WATCHDOG=1')
+
+
+def _systemd_ready(notifier):
+    notifier.send('READY=1')
 
 
 class ServerStatus(resource.Resource):
@@ -162,6 +174,21 @@ def main():
     # configure logging
     logging.basicConfig(format='%(asctime)s - %(levelname)s - %(message)s',
                         level=logging.INFO)
+
+    # systemd notifier instance
+    notifier = systemd.SystemdNotify()
+    # do systemd sd-notify ready call when reactor accepts connections
+    reactor.callLater(0.1, _systemd_ready, notifier)
+
+    # setup periodic watchdog call if requested
+    watchdog_usec = os.getenv('WATCHDOG_USEC')
+    if watchdog_usec:
+        logger.info('systemd watchdog support enabled')
+        watchdog_sec = int(watchdog_usec)/1000000/2.0
+        watchdog_call = task.LoopingCall(_systemd_watchdog_ping, notifier)
+        watchdog_call.start(watchdog_sec)
+        logger.info('systemd watchdog looping call every {} s'.format(
+            watchdog_sec))
 
     logger.info('Starting clustercheck...')
     reactor.listenTCP(int(args.port), server.Site(ServerStatus()), interface=bind)

@@ -10,6 +10,16 @@ This version is rewritten to use Python twisted, so this module is required.
 To start at run time:
 echo "/usr/bin/pyclustercheck -f /etc/my.cnf > /var/log/messages 2>&1 &" >> /etc/rc.local
 
+systemd support
+===============
+clustercheck supports systemd notify (READY and WATCHDOG). To enable the
+features, adjust your .service file and add:
+
+    [Service]
+    Type=notify
+    WatchdogSec=10
+
+
 Running the testsuite
 =====================
 There are some basic unittests which can be called via `tox`:
