@@ -101,18 +101,20 @@ class ServerStatus(resource.Resource):
             try:
                 with _db_get_connection(
                         opts.cnf_file, opts.c_timeout, opts.r_timeout) as conn:
-                    if conn:
-                        curs = conn.cursor()
-                        res = _db_get_wsrep_local_state(curs)
-                        opts.last_query_response = res
+                    curs = conn.cursor()
+                    res = _db_get_wsrep_local_state(curs)
+                    opts.last_query_response = res
 
-                        if opts.disable_when_ro:
-                            if _db_is_ro(curs):
-                                opts.is_ro = True
-                                res = None  # read_only is set and opts.disable_when_ro is also set, we should return this node as down
+                    if opts.disable_when_ro:
+                        if _db_is_ro(curs):
+                            opts.is_ro = True
+                            res = None  # read_only is set and opts.disable_when_ro is also set, we should return this node as down
 
             except pymysql.OperationalError as e:  # noqa
-                logger.exception("Can not get wsrep status")
+                logger.exception("Can not update cache. "
+                                 "pymysql operational error")
+            except Exception as e:  # noqa
+                logger.exception("Can not update cache")
 
         else:
             # run from cached response
