@@ -1,12 +1,17 @@
 #!/usr/bin/env python
 
 import argparse
+from contextlib import contextmanager
+from importlib import import_module
+import os
 from twisted.web import server, resource
-from twisted.internet import reactor
+from twisted.internet import reactor, task
 import pymysql
 import pymysql.cursors
 import time
 import logging
+
+from clustercheck import systemd
 
 '''
 __author__="See AUTHORS.txt at https://github.com/Oneiroi/clustercheck"
@@ -26,10 +31,66 @@ class opts:
     last_query_time = 0
     last_query_result = 0
     cnf_file = '~/.my.cnf'
-    being_updated = False
     # Overriding the connect timeout so that status check doesn't hang
     c_timeout = 10
     r_timeout = 5
+
+
+def _db_is_ro(cursor):
+    """is the database cluster node readonly?"""
+    cursor.execute("SHOW VARIABLES LIKE 'read_only'")
+    ro = cursor.fetchone()
+    if ro['Value'].lower() in ('on', '1'):
+        return True
+    return False
+
+
+def _db_get_wsrep_local_state(cursor):
+    """
+    get the WSREP local state or None
+    see http://galeracluster.com/documentation-webpages/\
+        galerastatusvariables.html#wsrep-local-state
+    """
+    cursor.execute("SHOW STATUS LIKE 'wsrep_local_state'")
+    res = cursor.fetchone()
+    if res:
+        return int(res['Value'])
+    return None
+
+
+@contextmanager
+def _db_get_connection(read_default_file, connect_timeout, read_timeout):
+    try:
+        conn = pymysql.connect(read_default_file=read_default_file,
+                               connect_timeout=connect_timeout,
+                               read_timeout=read_timeout,
+                               cursorclass=pymysql.cursors.DictCursor)
+        yield conn
+    finally:
+        try:
+            conn.close()
+        except:  # noqa
+            pass
+
+
+def _prepare_request_response_headers(request, cache_ttl):
+    # server information
+    request.setHeader("Server", "PXC Python clustercheck / 2.0")
+    request.setHeader("Content-type", "text/html")
+    # cache information
+    request.setHeader("X-Cache-TTL", "%d" % cache_ttl)
+    if cache_ttl <= 0:
+        request.setHeader("X-Cache", False)
+    else:
+        request.setHeader("X-Cache", True)
+
+
+def _systemd_watchdog_ping(notifier):
+    notifier.send('WATCHDOG=1')
+
+
+def _systemd_ready(notifier):
+    notifier.send('READY=1')
 
 
 class ServerStatus(resource.Resource):
@@ -39,70 +100,53 @@ class ServerStatus(resource.Resource):
         return self.render_GET(request)
 
     def render_GET(self, request):
-        conn = None
-        res = ''
+        res = None
         httpres = ''
         ctime = time.time()
         ttl = opts.last_query_time + opts.cache_time - ctime
-        request.setHeader("Server", "PXC Python clustercheck / 2.0")
 
-        if (ttl <= 0) and opts.being_updated is False:
-            # cache expired
-            opts.being_updated = True  # prevent mutliple threads falling through to MySQL for update
+        if ttl <= 0:
+            # cache expired - update data
             opts.last_query_time = ctime
-            # add some informational headers
-            request.setHeader("X-Cache", [False, ])
+            opts.last_query_response = None
 
             try:
-                conn = pymysql.connect(read_default_file=opts.cnf_file,
-                                       connect_timeout=opts.c_timeout,
-                                       read_timeout=opts.r_timeout,
-                                       cursorclass=pymysql.cursors.DictCursor)
-
-                if conn:
+                with _db_get_connection(
+                        opts.cnf_file, opts.c_timeout, opts.r_timeout) as conn:
                     curs = conn.cursor()
-                    curs.execute("SHOW STATUS LIKE 'wsrep_local_state'")
-                    res = curs.fetchall()
+                    res = _db_get_wsrep_local_state(curs)
                     opts.last_query_response = res
 
                     if opts.disable_when_ro:
-                        curs.execute("SHOW VARIABLES LIKE 'read_only'")
-                        ro = curs.fetchone()
-                        if ro['Value'].lower() in ('on', '1'):
-                            res = ()  # read_only is set and opts.disable_when_ro is also set, we should return this node as down
+                        if _db_is_ro(curs):
                             opts.is_ro = True
-
-                    conn.close()  # we're done with the connection let's not hang around
-                    opts.being_updated = False  # reset the flag
+                            res = None  # read_only is set and opts.disable_when_ro is also set, we should return this node as down
 
             except pymysql.OperationalError as e:  # noqa
-                opts.being_updated = False  # corrects bug where the flag is never reset on a communication failiure
-                logger.exception("Can not get wsrep status")
+                logger.exception("Can not update cache. "
+                                 "pymysql operational error")
+            except Exception as e:  # noqa
+                logger.exception("Can not update cache")
+
         else:
-            # add some informational headers
-            request.setHeader("X-Cache", True)
-            request.setHeader("X-Cache-TTL", "%d" % ttl)
-            request.setHeader("X-Cache-Updating", opts.being_updated)
-            request.setHeader("X-Cache-disable-when-RO", opts.disable_when_ro)
-            request.setHeader("X-Cache-node-is-RO", opts.is_ro)
             # run from cached response
             res = opts.last_query_response
 
-        if len(res) == 0:
+        # add headers to response
+        _prepare_request_response_headers(request, ttl)
+
+        if res is None:
             request.setResponseCode(503)
-            request.setHeader("Content-type", "text/html")
             httpres = "Percona XtraDB Cluster Node state could not be retrieved."
-            res = ()
+            res = None
             opts.last_query_response = res
             logger.warning('{} (503)'.format(httpres))
-        elif res[0]['Value'] == '4' or (int(opts.available_when_donor) == 1 and res[0]['Value'] == '2'):
+        elif res == 4 or (int(opts.available_when_donor) == 1 and res == 2):
             request.setResponseCode(200)
-            request.setHeader("Content-type", "text/html")
             httpres = "Percona XtraDB Cluster Node is synced."
             logger.debug('{} (200)'.format(httpres))
         else:
             request.setResponseCode(503)
-            request.setHeader("Content-type", "text/html")
             httpres = "Percona XtraDB Cluster Node is not synced."
             logger.warning('{} (503)'.format(httpres))
 
@@ -130,6 +174,21 @@ def main():
     # configure logging
     logging.basicConfig(format='%(asctime)s - %(levelname)s - %(message)s',
                         level=logging.INFO)
+
+    # systemd notifier instance
+    notifier = systemd.SystemdNotify()
+    # do systemd sd-notify ready call when reactor accepts connections
+    reactor.callLater(0.1, _systemd_ready, notifier)
+
+    # setup periodic watchdog call if requested
+    watchdog_usec = os.getenv('WATCHDOG_USEC')
+    if watchdog_usec:
+        logger.info('systemd watchdog support enabled')
+        watchdog_sec = int(watchdog_usec)/1000000/2.0
+        watchdog_call = task.LoopingCall(_systemd_watchdog_ping, notifier)
+        watchdog_call.start(watchdog_sec)
+        logger.info('systemd watchdog looping call every {} s'.format(
+            watchdog_sec))
 
     logger.info('Starting clustercheck...')
     reactor.listenTCP(int(args.port), server.Site(ServerStatus()), interface=bind)
