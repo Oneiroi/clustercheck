@@ -1,6 +1,8 @@
 clustercheck
 ============
 
+![Travis CI build state](https://travis-ci.com/Oneiroi/clustercheck.svg?branch=twisted "TravisCI clustercheck build state")
+
 Updated clustercheck, intended to be standalone service for the reporting of Percona XtraDB cluster nodes.
 
 This module requires MySQLdb package for python to function, aswell as a present ~/.my.cnf for the use the service will run as.
