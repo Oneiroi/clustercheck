@@ -2,7 +2,6 @@ clustercheck
 ============
 
 ![Travis CI build state](https://travis-ci.com/Oneiroi/clustercheck.svg?branch=twisted "TravisCI clustercheck build state")[![Total alerts](https://img.shields.io/lgtm/alerts/g/Oneiroi/clustercheck.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/Oneiroi/clustercheck/alerts/)
-[![Total alerts](https://img.shields.io/lgtm/alerts/g/Oneiroi/clustercheck.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/Oneiroi/clustercheck/alerts/)
 
 Updated clustercheck, intended to be standalone service for the reporting of Percona XtraDB cluster nodes.
 
