@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-from SimpleHTTPServer import SimpleHTTPRequestHandler
 import BaseHTTPServer
 import MySQLdb
 import MySQLdb.cursors
